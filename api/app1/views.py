@@ -1,4 +1,5 @@
 import json
+import math
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -6,7 +7,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Product
 from .serializers import ProductSerializer
-
+from django.core.paginator import Paginator
+from rest_framework.pagination import PageNumberPagination
 
 # REST API's
 @api_view(['GET', 'POST'])
@@ -28,6 +30,7 @@ def products(request):
         max_price =  request.GET.get('max_price')
         order = request.GET.get('order')
         products =  Product.objects.all()
+        page = int(request.GET.get('page'))
         if name  : # we can fetch the data by name or by charcater
             products = Product.filter(name__icontains=name)
         if min_price : #we can set the value for which we want to see the price
@@ -38,9 +41,18 @@ def products(request):
 
         if  order : # we can order it according to our needs
             products =  products.order_by(order)
-
-        serializer  = ProductSerializer(products , many  = True)
-        return Response(serializer.data , status = status.HTTP_200_OK)
+        # size = len(data)
+        # page_size = 3
+        # no_of_pages = math.ceil(size/page_size)
+        # data = data[:3]
+        # paginated_response = Paginator(products, per_page =3)
+        # products = paginated_response.page(page)
+        paginator = PageNumberPagination()
+        paginator.page_size = 3
+        result_page = paginator.paginate_queryset(products,request)
+        serializer  = ProductSerializer(result_page , many  = True)
+        # return Response(serializer.data , status = status.HTTP_200_OK)
+        return paginator.get_paginated_response(serializer.data)
 
 @api_view(['GET'])
 def product_detail(request,id):
