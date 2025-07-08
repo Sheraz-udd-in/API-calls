@@ -33,7 +33,7 @@ def products(request) :
         order = request.GET.get('order')
         products =  Product.objects.all()
         if name  :
-            products = Product.filter(name__icontains=name)
+            products = products.filter(name__icontains=name)
         if min_price :
             products =  products.filter(price__gte = min_price)
 
@@ -54,6 +54,6 @@ def product_detail(request , id) :
     return Response(serializer.data  , status =  status.HTTP_200_OK)
 
     # update method
-@api_view(['PUT'])
-def 
+# @api_view(['PUT'])
+# def product_detail(request, id):
     # delete method
