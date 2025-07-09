@@ -9,6 +9,9 @@ from .models import Product
 from .serializers import ProductSerializer
 from django.core.paginator import Paginator
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+
 
 # REST API's
 @permission_classes([IsAuthenticated])
@@ -31,7 +34,7 @@ def products(request):
         min_price =  request.GET.get('min_price')
         max_price =  request.GET.get('max_price')
         order = request.GET.get('order')
-        page = int(request.GET.get('page'))
+        page = int(request.GET.get('page',1))
         cache_key = f"products:name={name}&max_price={max_price}&order={order}&page={page}"
         cached_response = cache.get(cache_key)
 
