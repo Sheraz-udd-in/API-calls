@@ -1,6 +1,6 @@
 import json
 import math
-
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -11,12 +11,14 @@ from django.core.paginator import Paginator
 from rest_framework.pagination import PageNumberPagination
 
 # REST API's
+@permission_classes([IsAuthenticated])
 @api_view(['GET', 'POST'])
 def products(request):
     if request.method == 'POST':
         serializer = ProductSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            cache.clear()
             return Response({'message': "success"}, status=status.HTTP_200_OK)
         return Response({'message': "failure", 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -29,8 +31,14 @@ def products(request):
         min_price =  request.GET.get('min_price')
         max_price =  request.GET.get('max_price')
         order = request.GET.get('order')
-        products =  Product.objects.all()
         page = int(request.GET.get('page'))
+        cache_key = f"products:name={name}&max_price={max_price}&order={order}&page={page}"
+        cached_response = cache.get(cache_key)
+
+        if cached_response:
+            return Response(cached_response)
+        
+        products =  Product.objects.all()
         if name  : # we can fetch the data by name or by charcater
             products = Product.filter(name__icontains=name)
         if min_price : #we can set the value for which we want to see the price
@@ -49,10 +57,14 @@ def products(request):
         # products = paginated_response.page(page)
         paginator = PageNumberPagination()
         paginator.page_size = 3
-        result_page = paginator.paginate_queryset(products,request)
-        serializer  = ProductSerializer(result_page , many  = True)
-        # return Response(serializer.data , status = status.HTTP_200_OK)
-        return paginator.get_paginated_response(serializer.data)
+        result_page = paginator.paginate_queryset(products, request)
+        serializer = ProductSerializer(result_page, many=True)
+        response_data = paginator.get_paginated_response(serializer.data).data
+
+        # Store in cache
+        cache.set(cache_key, response_data, timeout=60 * 5)  # 5 minutes
+
+        return Response(response_data)
 
 @api_view(['GET'])
 def product_detail(request,id):
@@ -76,3 +88,4 @@ def product_delete(request,id):
     product=get_object_or_404(Product,id=id)
     product.delete()
     return Response({'message':'Product deleted Successfully'},status=status.HTTP_200_OK)
+
