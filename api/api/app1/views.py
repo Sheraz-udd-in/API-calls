@@ -5,8 +5,6 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-from app1.permission import IsVendor
 from .models import Product
 from .serializers import ProductSerializer
 from django.core.paginator import Paginator
@@ -16,8 +14,8 @@ from rest_framework.decorators import api_view, permission_classes
 
 
 # REST API's
-@permission_classes([IsAuthenticated, IsVendor])
-@api_view(['GET', 'POST'])   # http methods
+@permission_classes([IsAuthenticated])
+@api_view(['GET', 'POST'])
 def products(request):
     if request.method == 'POST':
         serializer = ProductSerializer(data=request.data)
@@ -67,7 +65,6 @@ def products(request):
         response_data = paginator.get_paginated_response(serializer.data).data
 
         # Store in cache
-        # Throtteling
         cache.set(cache_key, response_data, timeout=60 * 5)  # 5 minutes
 
         return Response(response_data)
@@ -95,7 +92,3 @@ def product_delete(request,id):
     product.delete()
     return Response({'message':'Product deleted Successfully'},status=status.HTTP_200_OK)
 
-#https:// resource ? (name = "mac" ) query parameter
-# DOS attack(denial of service attack) is under throtteling 
-# where a user continuously request the server and the queue is full by his request
-# we use rate limiting to prevent dos attack
